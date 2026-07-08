@@ -7,6 +7,7 @@
 <style>
   :root {
     --tangerine: #F97A24;
+    --salesmark: #C8960C;
     --oceanic:   #21A9CB;
     --violet:    #C01082;
     --ops:       #4B7BB5;
@@ -110,7 +111,7 @@
 
   .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 18px;
   }
 
@@ -247,7 +248,7 @@
     white-space: normal; word-break: break-word; line-height: 1.3;
   }
 
-  .color-tangerine { background: var(--tangerine); }
+  .color-tangerine { background: var(--salesmark); }
   .color-oceanic   { background: var(--oceanic); }
   .color-violet    { background: var(--violet); }
   .color-ops       { background: var(--ops); }
@@ -334,7 +335,7 @@
     box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--text);
   }
 
-  .color-option.opt-tangerine { background: var(--tangerine); }
+  .color-option.opt-tangerine { background: var(--salesmark); }
   .color-option.opt-oceanic   { background: var(--oceanic); }
   .color-option.opt-violet    { background: var(--violet); }
   .color-option.opt-ops       { background: var(--ops); }
@@ -389,8 +390,30 @@
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
 
-  @media (max-width: 1100px) { .calendar-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 900px)  { .calendar-grid { grid-template-columns: 1fr; } }
   @media (max-width: 700px)  { .calendar-grid { grid-template-columns: 1fr; } .header-hint { display:none; } }
+
+  /* ── Filter chips ── */
+  .legend-item.filter-chip {
+    cursor: pointer;
+    transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .legend-item.filter-chip:hover { background: var(--border); }
+  .legend-item.filter-chip.filter-on {
+    background: var(--text); color: #FEFEFE; border-color: var(--text);
+  }
+  .btn-clear-filter {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    background: none; border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 20px; cursor: pointer;
+    font-family: inherit; transition: all 0.15s; display: none;
+  }
+  .btn-clear-filter:hover { background: var(--border); color: var(--text); }
+  .legend-label-hint {
+    font-size: 10px; color: var(--text-muted); margin-left: 2px; font-weight: 400;
+    text-transform: none; letter-spacing: 0;
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -413,13 +436,14 @@
 </header>
 
 <div class="subheader">
-  <span class="legend-label">Categories</span>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--tangerine)"></div>Marketing</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--oceanic)"></div>Product</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--violet)"></div>Events</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--ops)"></div>Ops</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--holiday)"></div>Holiday</div>
+  <span class="legend-label">Filter <span class="legend-label-hint">(click to isolate)</span></span>
+  <div class="legend-item filter-chip" id="filter-tangerine" onclick="toggleFilter('tangerine')"><div class="legend-dot" style="background:var(--salesmark)"></div>Sales/Marketing</div>
+  <div class="legend-item filter-chip" id="filter-oceanic"   onclick="toggleFilter('oceanic')"  ><div class="legend-dot" style="background:var(--oceanic)"></div>Product</div>
+  <div class="legend-item filter-chip" id="filter-violet"    onclick="toggleFilter('violet')"   ><div class="legend-dot" style="background:var(--violet)"></div>Events</div>
+  <div class="legend-item filter-chip" id="filter-ops"       onclick="toggleFilter('ops')"      ><div class="legend-dot" style="background:var(--ops)"></div>Ops</div>
+  <div class="legend-item filter-chip" id="filter-holiday"   onclick="toggleFilter('holiday')"  ><div class="legend-dot" style="background:var(--holiday)"></div>Holiday</div>
   <div class="legend-item qtr-legend"><div class="legend-dot" style="background:var(--qtr-bg);border:1px dashed #C8C2BB"></div>Quarter boundary</div>
+  <button class="btn-clear-filter" id="btnClearFilter" onclick="clearFilters()">✕ Clear filter</button>
   <span class="event-count-badge" id="totalCount">0 events</span>
 </div>
 
@@ -468,7 +492,7 @@
     <div class="form-group">
       <label class="form-label">Category</label>
       <div class="color-picker">
-        <div class="color-option opt-tangerine selected" data-c="tangerine" onclick="pickColor('tangerine')" title="Marketing"></div>
+        <div class="color-option opt-tangerine selected" data-c="tangerine" onclick="pickColor('tangerine')" title="Sales/Marketing"></div>
         <div class="color-option opt-oceanic"   data-c="oceanic"   onclick="pickColor('oceanic')"   title="Product"></div>
         <div class="color-option opt-violet"    data-c="violet"    onclick="pickColor('violet')"    title="Events"></div>
         <div class="color-option opt-ops"       data-c="ops"       onclick="pickColor('ops')"       title="Ops"></div>
@@ -535,7 +559,7 @@ const MONTHS = [
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 const COLOR_LABELS = {
-  tangerine: 'Marketing', oceanic: 'Product', violet: 'Events',
+  tangerine: 'Sales/Marketing', oceanic: 'Product', violet: 'Events',
   ops: 'Ops', holiday: 'Holiday'
 };
 
@@ -551,12 +575,13 @@ const today    = new Date();
 const TODAY_KEY = fmtKey(today.getFullYear(), today.getMonth(), today.getDate());
 
 // ── State ──────────────────────────────────────────────────────────────────
-let events    = {};   // { 'startDate': [{id, title, notes, color, endDate?}] }
-let modalDate = null; // start date key for current modal
-let editId    = null;
-let selColor  = 'tangerine';
-let drag      = null; // { id, startKey }
-let dayViewKey = null;
+let events      = {};   // { 'startDate': [{id, title, notes, color, endDate?}] }
+let modalDate   = null; // start date key for current modal
+let editId      = null;
+let selColor    = 'tangerine';
+let drag        = null; // { id, startKey }
+let dayViewKey  = null;
+let activeFilters = new Set(); // empty = show all
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function fmtKey(y, m, d) {
@@ -579,12 +604,39 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Category filters ───────────────────────────────────────────────────────
+function toggleFilter(color) {
+  if (activeFilters.has(color)) activeFilters.delete(color);
+  else activeFilters.add(color);
+  updateFilterUI();
+  render();
+}
+
+function clearFilters() {
+  activeFilters.clear();
+  updateFilterUI();
+  render();
+}
+
+function updateFilterUI() {
+  const colors = ['tangerine', 'oceanic', 'violet', 'ops', 'holiday'];
+  const hasActive = activeFilters.size > 0;
+  colors.forEach(c => {
+    const el = document.getElementById('filter-' + c);
+    if (!el) return;
+    el.classList.toggle('filter-on', activeFilters.has(c));
+  });
+  const clearBtn = document.getElementById('btnClearFilter');
+  if (clearBtn) clearBtn.style.display = hasActive ? '' : 'none';
+}
+
 // Returns all events visible on a given dateKey (including multi-day spans)
 // Each returned item: { ev, startKey, position: 'single'|'start'|'mid'|'end' }
 function getEventsForDay(dateKey) {
   const result = [];
   Object.keys(events).forEach(startKey => {
     (events[startKey] || []).forEach(ev => {
+      if (activeFilters.size > 0 && !activeFilters.has(ev.color)) return;
       if (ev.endDate && ev.endDate > startKey) {
         // Multi-day event
         if (dateKey >= startKey && dateKey <= ev.endDate) {
